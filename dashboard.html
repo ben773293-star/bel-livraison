@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mon espace — BEL</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --vert:#1a6b3c;--vert-clair:#2d9e5f;--vert-pale:#e8f5ee;--vert-doux:#c8e6d4;
+    --or:#d97706;--or-pale:#fef3c7;--rouge:#dc2626;
+    --blanc:#ffffff;--creme:#fafaf7;--gris-clair:#f4f4f0;--gris:#e5e5e0;
+    --texte:#1a1a18;--texte-doux:#4a4a44;--texte-leger:#7a7a72;
+    --ombre:0 2px 12px rgba(0,0,0,0.08);--ombre-md:0 4px 24px rgba(0,0,0,0.10);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--creme);color:var(--texte);min-height:100vh;display:flex;flex-direction:column;}
+
+  .topbar{height:64px;background:var(--blanc);border-bottom:1.5px solid var(--gris);display:flex;align-items:center;padding:0 24px;gap:14px;position:sticky;top:0;z-index:100;box-shadow:var(--ombre);}
+  .tb-logo{font-family:'Fraunces',serif;font-weight:800;font-size:17px;color:var(--vert);flex:1;display:flex;align-items:center;gap:10px;}
+  .tb-logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--vert),var(--vert-clair));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+  .tb-user{font-size:13px;color:var(--texte-doux);font-weight:500;}
+  .tb-role{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 12px;border-radius:20px;}
+  .tb-role.livreur{background:var(--or-pale);color:var(--or);border:1px solid #fcd34d;}
+  .tb-role.commercant{background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe;}
+  .btn-logout{padding:8px 14px;background:var(--gris-clair);border:1.5px solid var(--gris);border-radius:8px;color:var(--texte-doux);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+  .btn-logout:hover{border-color:var(--rouge);color:var(--rouge);background:#fef2f2;}
+
+  .nav{display:flex;gap:2px;padding:10px 20px;background:var(--blanc);border-bottom:1.5px solid var(--gris);overflow-x:auto;}
+  .nav-btn{padding:9px 16px;border:none;background:transparent;color:var(--texte-leger);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;border-radius:8px;white-space:nowrap;transition:all 0.2s;}
+  .nav-btn:hover{background:var(--vert-pale);color:var(--vert);}
+  .nav-btn.active{background:var(--vert-pale);color:var(--vert);}
+
+  .main{flex:1;padding:24px;max-width:960px;margin:0 auto;width:100%;}
+  .sec-title{font-family:'Fraunces',serif;font-size:22px;font-weight:800;color:var(--texte);margin-bottom:20px;}
+  .sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px;}
+  .stat{background:var(--blanc);border:1.5px solid var(--gris);border-radius:14px;padding:18px;position:relative;overflow:hidden;box-shadow:var(--ombre);}
+  .stat::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;}
+  .stat.g::before{background:var(--vert-clair);}.stat.o::before{background:var(--or);}.stat.b::before{background:#3b82f6;}
+  .stat-lbl{font-size:11px;color:var(--texte-leger);text-transform:uppercase;letter-spacing:1px;font-weight:600;}
+  .stat-val{font-family:'Fraunces',serif;font-size:28px;font-weight:800;margin:6px 0 3px;}
+  .stat-val.g{color:var(--vert);}.stat-val.o{color:var(--or);}.stat-val.b{color:#3b82f6;}
+
+  .card{background:var(--blanc);border:1.5px solid var(--gris);border-radius:16px;padding:22px;margin-bottom:18px;box-shadow:var(--ombre);}
+  .card-title{font-family:'Fraunces',serif;font-size:16px;font-weight:800;color:var(--texte);margin-bottom:18px;display:flex;align-items:center;gap:8px;}
+
+  .fg{margin-bottom:14px;}
+  .fg label{display:block;font-size:11px;color:var(--texte-leger);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;font-weight:700;}
+  .fg input,.fg select,.fg textarea{width:100%;padding:12px 14px;background:var(--gris-clair);border:1.5px solid var(--gris);border-radius:10px;color:var(--texte);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;outline:none;transition:all 0.2s;resize:vertical;}
+  .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--vert);background:var(--blanc);box-shadow:0 0 0 3px rgba(26,107,60,0.08);}
+  .fg select option{background:white;color:var(--texte);}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  .btn{padding:10px 18px;border:none;border-radius:10px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:7px;}
+  .btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .btn-green{background:var(--vert);color:white;box-shadow:0 3px 10px rgba(26,107,60,0.25);}
+  .btn-green:hover:not(:disabled){background:var(--vert-clair);transform:translateY(-1px);}
+  .btn-or{background:var(--or);color:white;font-weight:700;}
+  .btn-or:hover:not(:disabled){background:#b45309;}
+  .btn-ghost{background:var(--gris-clair);border:1.5px solid var(--gris);color:var(--texte-doux);}
+  .btn-ghost:hover{border-color:var(--vert);color:var(--vert);background:var(--vert-pale);}
+  .btn-full{width:100%;justify-content:center;}
+  .btn-big{padding:16px 24px;font-size:16px;font-family:'Fraunces',serif;}
+  .btn-blue{background:#3b82f6;color:white;}
+  .btn-blue:hover:not(:disabled){background:#2563eb;}
+
+  .bs{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+  .s-disponible{background:var(--vert-pale);color:var(--vert);border:1px solid var(--vert-doux);}
+  .s-en-course{background:var(--or-pale);color:var(--or);border:1px solid #fcd34d;}
+  .s-hors-ligne{background:var(--gris-clair);color:var(--texte-leger);border:1px solid var(--gris);}
+  .s-en-attente{background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe;}
+  .s-assignee{background:var(--or-pale);color:var(--or);border:1px solid #fcd34d;}
+  .s-collecte{background:var(--vert-pale);color:var(--vert);border:1px solid var(--vert-doux);}
+  .s-livree{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;}
+  .s-paye{background:var(--vert-pale);color:var(--vert);border:1px solid var(--vert);}
+
+  .cmd{background:var(--blanc);border:1.5px solid var(--gris);border-radius:14px;padding:20px;margin-bottom:14px;box-shadow:var(--ombre);transition:all 0.2s;}
+  .cmd:hover{border-color:var(--vert-doux);}
+  .cmd.urgent{border-color:#fcd34d;background:#fffbeb;}
+  .cmd-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;}
+  .cmd-id{font-family:'Fraunces',serif;font-weight:800;font-size:16px;color:var(--texte);}
+  .cmd-meta{font-size:12px;color:var(--texte-leger);margin-top:3px;font-weight:500;}
+
+  /* GPS CARD */
+  .gps-card{background:var(--gris-clair);border:1.5px solid var(--gris);border-radius:12px;padding:16px;margin-bottom:14px;}
+  .gps-card.success{background:var(--vert-pale);border-color:var(--vert-doux);}
+  .gps-card.error{background:#fef2f2;border-color:#fecaca;}
+  .gps-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--texte-leger);margin-bottom:8px;}
+  .gps-card.success .gps-label{color:var(--vert);}
+  .gps-coords{font-family:monospace;font-size:13px;color:var(--texte);font-weight:600;}
+  .gps-addr{font-size:13px;color:var(--texte-doux);margin-top:4px;}
+
+  /* TARIF BOX */
+  .tarif-box{background:linear-gradient(135deg,var(--vert-pale),#f0faf4);border:2px solid var(--vert-doux);border-radius:16px;padding:22px;margin-bottom:18px;}
+  .tarif-box-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--vert);margin-bottom:10px;}
+  .tarif-montant{font-family:'Fraunces',serif;font-size:52px;font-weight:800;color:var(--vert);line-height:1;}
+  .tarif-fcfa{font-size:18px;color:var(--texte-leger);font-weight:500;margin-left:6px;}
+  .tarif-details{display:flex;flex-direction:column;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--vert-doux);}
+  .tarif-ligne{display:flex;justify-content:space-between;align-items:center;font-size:14px;}
+  .tarif-ligne .lbl{color:var(--texte-doux);}
+  .tarif-ligne .val{font-weight:700;color:var(--texte);}
+  .tarif-ligne .val.vert{color:var(--vert);}
+  .tarif-ligne .val.muted{color:var(--texte-leger);}
+  .tarif-message{margin-top:14px;padding:12px 16px;background:var(--or-pale);border:1px solid #fcd34d;border-radius:10px;font-size:14px;color:#92400e;font-weight:600;}
+
+  /* EXTRAS */
+  .extras-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;}
+  .extra-check{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--gris-clair);border:1.5px solid var(--gris);border-radius:10px;cursor:pointer;transition:all 0.2s;user-select:none;}
+  .extra-check:hover{border-color:var(--vert-doux);background:var(--vert-pale);}
+  .extra-check.checked{background:var(--or-pale);border-color:#fcd34d;}
+  .extra-check-icon{font-size:20px;flex-shrink:0;}
+  .extra-check-name{font-size:13px;font-weight:700;color:var(--texte);}
+  .extra-check-prix{font-size:11px;color:var(--or);font-weight:600;}
+
+  /* SUIVI */
+  .suivi-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 10px;border-radius:20px;font-weight:600;}
+  .suivi-dot{width:7px;height:7px;border-radius:50%;animation:pulse 1.5s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.7)}}
+
+  /* TRAJET */
+  .trajet-box{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .trajet-pt{flex:1;min-width:140px;background:var(--gris-clair);border-radius:10px;padding:12px;}
+  .trajet-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--texte-leger);font-weight:700;}
+  .trajet-addr{font-size:13px;margin-top:4px;font-weight:600;color:var(--texte);}
+  .trajet-coord{font-size:11px;color:var(--texte-leger);margin-top:2px;font-family:monospace;}
+  .trajet-arrow{display:flex;align-items:center;font-size:20px;color:var(--vert);padding-top:14px;}
+
+  .alert{padding:13px 16px;border-radius:11px;font-size:14px;margin-bottom:16px;font-weight:500;}
+  .alert-info{background:#eff6ff;border:1.5px solid #bfdbfe;color:#1d4ed8;}
+  .alert-success{background:var(--vert-pale);border:1.5px solid var(--vert-doux);color:var(--vert);}
+  .alert-warning{background:var(--or-pale);border:1.5px solid #fcd34d;color:#92400e;}
+
+  .profil-header{display:flex;align-items:center;gap:18px;margin-bottom:22px;}
+  .profil-avatar{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;}
+  .profil-name{font-family:'Fraunces',serif;font-size:20px;font-weight:800;color:var(--texte);}
+  .profil-sub{font-size:13px;color:var(--texte-leger);margin-top:3px;}
+  .info-ligne{display:flex;justify-content:space-between;font-size:14px;padding:11px 0;border-bottom:1px solid var(--gris);}
+  .info-ligne:last-child{border-bottom:none;}
+  .info-lbl{color:var(--texte-leger);font-weight:500;}
+  .info-val{font-weight:600;color:var(--texte);}
+
+  .statut-sw{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+  .statut-btn{padding:10px 16px;border:1.5px solid var(--gris);border-radius:10px;background:var(--gris-clair);color:var(--texte-leger);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+  .statut-btn.act-disponible{background:var(--vert-pale);border-color:var(--vert-doux);color:var(--vert);}
+  .statut-btn.act-en-course{background:var(--or-pale);border-color:#fcd34d;color:var(--or);}
+  .statut-btn.act-hors-ligne{background:var(--gris-clair);border-color:var(--gris);color:var(--texte-leger);}
+
+  /* SERIE */
+  .serie-item{background:var(--blanc);border:1.5px solid var(--gris);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--ombre);}
+  .serie-num{width:32px;height:32px;background:var(--vert);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:800;font-size:14px;color:white;flex-shrink:0;}
+  .serie-info{flex:1;}
+  .serie-addr{font-size:14px;font-weight:600;color:var(--texte);}
+  .serie-detail{font-size:12px;color:var(--texte-leger);margin-top:3px;}
+  .serie-prix{font-family:'Fraunces',serif;font-size:16px;font-weight:800;color:var(--vert);}
+
+  .empty{text-align:center;padding:48px 20px;color:var(--texte-leger);}
+  .empty .ic{font-size:48px;margin-bottom:14px;}
+  .empty p{font-size:15px;}
+  .loading{text-align:center;padding:48px;color:var(--texte-leger);font-size:15px;}
+
+  .toast-c{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;}
+  .toast{background:var(--blanc);border:1.5px solid var(--gris);border-radius:12px;padding:13px 16px;font-size:14px;font-weight:600;max-width:320px;animation:si 0.3s ease;box-shadow:var(--ombre-md);}
+  .toast.success{border-color:var(--vert-doux);background:var(--vert-pale);color:var(--vert);}
+  .toast.warning{border-color:#fcd34d;background:var(--or-pale);color:#92400e;}
+  @keyframes si{from{transform:translateX(100px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+  @media(max-width:600px){
+    .main{padding:14px;}
+    .topbar{padding:0 14px;}
+    .nav{padding:8px 14px;}
+    .form-row{grid-template-columns:1fr;}
+    .extras-grid{grid-template-columns:1fr;}
+    .trajet-box{flex-direction:column;}
+    .trajet-arrow{transform:rotate(90deg);padding:0;align-self:center;}
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="tb-logo">
+    <div class="tb-logo-icon">🚀</div>
+    BEL
+  </div>
+  <div class="tb-user" id="tb-user"></div>
+  <div class="tb-role" id="tb-role"></div>
+  <button class="btn-logout" onclick="logout()">Déconnexion</button>
+</div>
+<div class="nav" id="nav"></div>
+<div class="main" id="main"><div class="loading">⏳ Chargement...</div></div>
+<div class="toast-c" id="toast-c"></div>
+
+<script>
+const SUPABASE_URL='https://oklotjdbfeawqastqtyc.supabase.co';
+const SUPABASE_KEY='sb_publishable_KDjEeMlP0jPKJTfGXx6QaQ_6HoK8BGj';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let currentUser=null,currentRole=null;
+
+// ============================================================
+// GRILLE TARIFAIRE
+// ============================================================
+const GRILLE=[
+  {min:0,max:5,tarif:1000},{min:6,max:8,tarif:1300},
+  {min:9,max:10,tarif:1500},{min:11,max:12,tarif:1800},
+  {min:13,max:15,tarif:2000},{min:16,max:18,tarif:2500},
+  {min:19,max:22,tarif:3000},{min:23,max:999,tarif:4000},
+];
+
+function getTarif(km,extras={lourd:false,express:false,nuit:false}){
+  let t=GRILLE[GRILLE.length-1].tarif;
+  for(const g of GRILLE){if(km>=g.min&&km<=g.max){t=g.tarif;break;}}
+  if(extras.lourd)t+=500;
+  if(extras.express)t+=500;
+  if(extras.nuit)t+=500;
+  t=Math.min(t,4000);
+  return{tarif:t,livreur:Math.round(t*0.8),commission:Math.round(t*0.2)};
+}
+
+// ============================================================
+// CALCUL DISTANCE GPS (Haversine)
+// ============================================================
+function haversine(lat1,lng1,lat2,lng2){
+  const R=6371;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return+(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))).toFixed(1);
+}
+
+// ============================================================
+// EXTRACTION COORDONNÉES depuis lien ou texte
+// ============================================================
+function extraireCoords(input){
+  input=input.trim();
+  // Format: "12.3456, -1.6789" ou "12.3456,-1.6789"
+  const coordRegex=/(-?\d{1,3}\.\d+)[,\s]+(-?\d{1,3}\.\d+)/;
+  // Liens Google Maps: ?q=lat,lng ou @lat,lng ou maps?ll=lat,lng
+  const patterns=[
+    /[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+    /@(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+    /ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+    /maps\/(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+    /place\/(-?\d+\.?\d*)\+(-?\d+\.?\d*)/,
+    /\!3d(-?\d+\.?\d*)\!4d(-?\d+\.?\d*)/,
+  ];
+  for(const p of patterns){
+    const m=input.match(p);
+    if(m){
+      const lat=parseFloat(m[1]),lng=parseFloat(m[2]);
+      if(lat>=-90&&lat<=90&&lng>=-180&&lng<=180) return{lat,lng,source:'lien'};
+    }
+  }
+  // Essai format coordonnées directes
+  const m=input.match(coordRegex);
+  if(m){
+    const lat=parseFloat(m[1]),lng=parseFloat(m[2]);
+    if(lat>=-90&&lat<=90&&lng>=-180&&lng<=180) return{lat,lng,source:'coordonnées'};
+  }
+  return null;
+}
+
+function lienGoogleMaps(lat,lng){
+  return`https://www.google.com/maps?q=${lat},${lng}`;
+}
+
+function lienWhatsApp(tel,msg){
+  return`https://wa.me/226${tel}?text=${encodeURIComponent(msg)}`;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+async function init(){
+  const s=localStorage.getItem('bel_session');
+  if(!s){window.location.href='index.html';return;}
+  const session=JSON.parse(s);
+  currentRole=session.role;
+  const tbl=currentRole==='livreur'?'livreurs':'commercants';
+  const{data}=await sb.from(tbl).select('*').eq('id',session.id).single();
+  currentUser=data;
+  if(!currentUser){window.location.href='index.html';return;}
+  document.getElementById('tb-user').textContent=currentRole==='livreur'?currentUser.prenom+' '+currentUser.nom:currentUser.boutique;
+  document.getElementById('tb-role').className='tb-role '+currentRole;
+  document.getElementById('tb-role').textContent=currentRole==='livreur'?'🛵 Livreur':'🏪 Commerçant';
+  buildNav();
+  renderPage(currentRole==='livreur'?'lv-accueil':'cm-accueil');
+}
+
+function logout(){localStorage.removeItem('bel_session');window.location.href='index.html';}
+
+function buildNav(){
+  const tabs=currentRole==='livreur'?[
+    {id:'lv-accueil',icon:'🏠',label:'Accueil'},
+    {id:'lv-courses',icon:'📦',label:'Mes courses'},
+    {id:'lv-gains',icon:'💰',label:'Mes gains'},
+    {id:'lv-profil',icon:'👤',label:'Mon profil'},
+  ]:[
+    {id:'cm-accueil',icon:'🏠',label:'Accueil'},
+    {id:'cm-nouvelle',icon:'📍',label:'Nouvelle livraison'},
+    {id:'cm-serie',icon:'🚀',label:'Livraisons en série'},
+    {id:'cm-suivi',icon:'🔍',label:'Mes livraisons'},
+    {id:'cm-profil',icon:'👤',label:'Mon profil'},
+  ];
+  document.getElementById('nav').innerHTML=tabs.map(t=>`
+    <button class="nav-btn" onclick="renderPage('${t.id}')" data-page="${t.id}">${t.icon} ${t.label}</button>`).join('');
+}
+
+function renderPage(id){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===id));
+  const el=document.getElementById('main');
+  el.innerHTML='<div class="loading">⏳ Chargement...</div>';
+  const pages={
+    'lv-accueil':pageLvAccueil,'lv-courses':pageLvCourses,'lv-gains':pageLvGains,'lv-profil':pageLvProfil,
+    'cm-accueil':pageCmAccueil,'cm-nouvelle':pageCmNouvelle,'cm-serie':pageCmSerie,
+    'cm-suivi':pageCmSuivi,'cm-profil':pageCmProfil
+  };
+  if(pages[id])pages[id](el);
+}
+
+function sLabel(s){return{'en-attente':'En attente','assignee':'Assignée','collecte':'En cours','livree':'Livrée','paye':'Payée'}[s]||s;}
+function lvLabel(s){return{'disponible':'Disponible','en-course':'En course','hors-ligne':'Hors ligne'}[s]||s;}
+
+function toast(msg,type='success'){
+  const c=document.getElementById('toast-c');
+  const t=document.createElement('div');
+  t.className='toast '+type;
+  t.textContent=(type==='success'?'✅ ':'⚠️ ')+msg;
+  c.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity 0.4s';setTimeout(()=>t.remove(),400);},4000);
+}
+
+function getSuiviBadge(statut){
+  const cfg={
+    'en-attente':{bg:'#eff6ff',color:'#3b82f6',dot:'#3b82f6',label:"En attente d'un livreur"},
+    'assignee':{bg:var_or_pale,color:'#d97706',dot:'#d97706',label:'Livreur en route vers vous'},
+    'collecte':{bg:var_vert_pale,color:'#1a6b3c',dot:'#2d9e5f',label:'Colis en route vers le client'},
+    'livree':{bg:'#f0fdf4',color:'#16a34a',dot:'#16a34a',label:'Livré — Paiement attendu'},
+    'paye':{bg:var_vert_pale,color:'#1a6b3c',dot:null,label:'Terminé ✅'},
+  };
+  const c=cfg[statut]||{bg:'#f4f4f0',color:'#7a7a72',dot:null,label:statut};
+  return`<div class="suivi-badge" style="background:${c.bg};color:${c.color};border:1px solid ${c.color}30">
+    ${c.dot?`<div class="suivi-dot" style="background:${c.dot}"></div>`:''}${c.label}
+  </div>`;
+}
+const var_or_pale='#fef3c7',var_vert_pale='#e8f5ee';
+
+// ============================================================
+// RENDU COMMANDES
+// ============================================================
+function renderCmds(cmds,monTel='',livreurView=false){
+  if(!cmds.length)return'<div class="empty"><div class="ic">📭</div><p>Aucune livraison pour le moment</p></div>';
+  return cmds.map(c=>{
+    let actions='';
+    if(livreurView){
+      if(c.statut==='assignee')actions=`<button class="btn btn-or" onclick="majStatut('${c.id}','collecte','lv-courses')">✅ Colis récupéré</button>`;
+      else if(c.statut==='collecte')actions=`<button class="btn btn-green" onclick="majStatut('${c.id}','livree','lv-courses')">📦 Colis remis au client</button>`;
+    }else{
+      if(c.statut==='assignee')actions=`<button class="btn btn-green" onclick="majStatut('${c.id}','assignee','cm-suivi')">✅ Confirmer remise au livreur</button>`;
+    }
+    const dist=c.distance_km?`${c.distance_km} km`:'—';
+    const extrasLabel=[c.extra_lourd?'📦 Lourd':'',c.extra_express?'⚡ Express':'',c.extra_nuit?'🌙 Nuit':''].filter(Boolean).join(' · ');
+    const coordClient=c.lat_client&&c.lng_client?`${c.lat_client},${c.lng_client}`:null;
+    return`<div class="cmd ${c.statut==='en-attente'?'urgent':''}">
+      <div class="cmd-head">
+        <div>
+          <div class="cmd-id">${c.id} <span style="font-size:13px;color:var(--texte-leger);font-family:'Plus Jakarta Sans',sans-serif;font-weight:500">— ${c.commercant_nom||''}</span></div>
+          <div class="cmd-meta">📦 ${c.colis||''}${c.livreur_nom?' · 🛵 '+c.livreur_nom:''} · 📅 ${new Date(c.created_at).toLocaleDateString('fr-FR')} · 📏 ${dist}${extrasLabel?' · '+extrasLabel:''}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <span class="bs s-${c.statut}">${sLabel(c.statut)}</span>
+          ${getSuiviBadge(c.statut)}
+        </div>
+      </div>
+      <div class="trajet-box">
+        <div class="trajet-pt">
+          <div class="trajet-lbl">📍 Collecte (boutique)</div>
+          <div class="trajet-addr">${c.collecte_addr||'—'}</div>
+          ${c.lat_boutique&&c.lng_boutique?`<div class="trajet-coord">${c.lat_boutique}, ${c.lng_boutique}</div><a href="${lienGoogleMaps(c.lat_boutique,c.lng_boutique)}" target="_blank" style="font-size:12px;color:var(--vert);font-weight:600;margin-top:4px;display:inline-block">Voir sur Maps →</a>`:''}
+        </div>
+        <div class="trajet-arrow">→</div>
+        <div class="trajet-pt">
+          <div class="trajet-lbl">🏁 Dépôt (client)</div>
+          <div class="trajet-addr">${c.depot_addr||'—'}</div>
+          ${coordClient?`<div class="trajet-coord">${coordClient}</div><a href="${lienGoogleMaps(c.lat_client,c.lng_client)}" target="_blank" style="font-size:12px;color:var(--vert);font-weight:600;margin-top:4px;display:inline-block">Voir sur Maps →</a>`:''}
+        </div>
+      </div>
+      ${['assignee','collecte','livree'].includes(c.statut)?`
+      <div class="alert alert-info" style="margin-bottom:12px">
+        💰 Tarif : <strong>${c.tarif?.toLocaleString()} F</strong> — Client paie sur <strong>${monTel||'N/A'}</strong> après réception
+        ${coordClient?`<br>📍 <a href="${lienGoogleMaps(c.lat_client,c.lng_client)}" target="_blank" style="color:#1d4ed8;font-weight:700">Ouvrir la localisation client sur Maps</a>`:''}
+      </div>`:''}
+      ${actions?`<div style="display:flex;gap:8px;flex-wrap:wrap">${actions}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function majStatut(id,statut,returnPage){
+  await sb.from('commandes').update({statut}).eq('id',id);
+  toast('Statut mis à jour : '+sLabel(statut));
+  renderPage(returnPage);
+}
+
+// ============================================================
+// PAGES LIVREUR
+// ============================================================
+async function pageLvAccueil(el){
+  const{data:u}=await sb.from('livreurs').select('*').eq('id',currentUser.id).single();
+  if(u)currentUser=u;
+  const{data:cmds}=await sb.from('commandes').select('*').eq('livreur_id',currentUser.id).order('created_at',{ascending:false});
+  const enCours=(cmds||[]).filter(c=>['assignee','collecte'].includes(c.statut));
+  const terminees=(cmds||[]).filter(c=>['livree','paye'].includes(c.statut));
+  const gains=terminees.reduce((s,c)=>s+(c.tarif-Math.round(c.tarif*0.2)),0);
+  el.innerHTML=`
+    <div class="profil-header">
+      <div class="profil-avatar" style="background:linear-gradient(135deg,#1a6b3c,#2d9e5f)">🛵</div>
+      <div><div class="profil-name">${currentUser.prenom} ${currentUser.nom}</div><div class="profil-sub">📍 ${currentUser.zone} · ID : ${currentUser.id}</div></div>
+    </div>
+    <div class="stats">
+      <div class="stat o"><div class="stat-lbl">En cours</div><div class="stat-val o">${enCours.length}</div></div>
+      <div class="stat g"><div class="stat-lbl">Gains totaux</div><div class="stat-val g">${gains.toLocaleString()} F</div></div>
+      <div class="stat b"><div class="stat-lbl">Livraisons</div><div class="stat-val b">${terminees.length}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📍 Ma position actuelle</div>
+      <div class="fg"><label>Zone déclarée</label>
+        <select id="lv-zone" onchange="majZone()">${zoneOpts(currentUser.zone)}</select>
+      </div>
+      <div class="fg"><label>Statut de disponibilité</label>
+        <div class="statut-sw">
+          ${['disponible','en-course','hors-ligne'].map(s=>`<button class="statut-btn ${currentUser.statut===s?'act-'+s:''}" onclick="majStatutLv('${s}')">${{disponible:'🟢 Disponible','en-course':'🟡 En course','hors-ligne':'🔴 Hors ligne'}[s]}</button>`).join('')}
+        </div>
+      </div>
+    </div>
+    ${enCours.length?`<div class="card"><div class="card-title">🔥 Course en cours</div>${renderCmds(enCours,'',true)}</div>`:''}
+  `;
+}
+
+async function pageLvCourses(el){
+  const{data:monTelRow}=await sb.from('parametres').select('valeur').eq('cle','montel').single();
+  const{data:cmds}=await sb.from('commandes').select('*').eq('livreur_id',currentUser.id).order('created_at',{ascending:false});
+  el.innerHTML=`<div class="sec-title">📦 Mes courses</div>${renderCmds(cmds||[],monTelRow?.valeur||'',true)}`;
+}
+
+async function pageLvGains(el){
+  const{data:cmds}=await sb.from('commandes').select('*').eq('livreur_id',currentUser.id).in('statut',['livree','paye']).order('created_at',{ascending:false});
+  const total=(cmds||[]).reduce((s,c)=>s+(c.tarif-Math.round(c.tarif*0.2)),0);
+  el.innerHTML=`
+    <div class="sec-title">💰 Mes gains</div>
+    <div class="card" style="text-align:center;padding:40px">
+      <div style="font-size:11px;color:var(--texte-leger);letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:10px">TOTAL GAGNÉ</div>
+      <div style="font-family:'Fraunces',serif;font-size:56px;font-weight:800;color:var(--vert)">${total.toLocaleString()}</div>
+      <div style="font-size:18px;color:var(--texte-leger);font-weight:500">FCFA</div>
+    </div>
+    <div class="card"><div class="card-title">📋 Historique des courses</div>
+      ${(cmds||[]).length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+        <thead><tr>${['ID','Distance','Tarif','Ma part (80%)','Statut'].map(h=>`<th style="text-align:left;font-size:11px;color:var(--texte-leger);text-transform:uppercase;letter-spacing:1px;padding:10px 12px;border-bottom:2px solid var(--gris);font-weight:700">${h}</th>`).join('')}</tr></thead>
+        <tbody>${(cmds||[]).map(c=>{const p=c.tarif-Math.round(c.tarif*0.2);return`<tr style="border-bottom:1px solid var(--gris)">
+          <td style="padding:12px;font-family:monospace;color:var(--vert);font-size:13px;font-weight:700">${c.id}</td>
+          <td style="padding:12px;font-size:13px">${c.distance_km?c.distance_km+' km':'—'}</td>
+          <td style="padding:12px;font-weight:600">${c.tarif?.toLocaleString()} F</td>
+          <td style="padding:12px;color:var(--vert);font-weight:800">${p.toLocaleString()} F</td>
+          <td style="padding:12px"><span class="bs s-${c.statut}">${sLabel(c.statut)}</span></td>
+        </tr>`;}).join('')}</tbody>
+      </table></div>`:'<div class="empty"><div class="ic">📭</div><p>Aucune course terminée</p></div>'}
+    </div>`;
+}
+
+async function pageLvProfil(el){
+  el.innerHTML=`
+    <div class="sec-title">👤 Mon profil</div>
+    <div class="card">
+      <div class="profil-header">
+        <div class="profil-avatar" style="background:linear-gradient(135deg,#1a6b3c,#2d9e5f)">🛵</div>
+        <div><div class="profil-name">${currentUser.prenom} ${currentUser.nom}</div><div class="profil-sub">ID : ${currentUser.id}</div></div>
+      </div>
+      ${[['📞 Téléphone',currentUser.tel],['💬 WhatsApp',currentUser.whatsapp],['🪪 CNI',currentUser.cni],['🏍️ Moto',currentUser.moto],['📍 Zone',currentUser.zone],['🔵 Statut',`<span class="bs s-${currentUser.statut}">${lvLabel(currentUser.statut)}</span>`]].map(([l,v])=>`<div class="info-ligne"><span class="info-lbl">${l}</span><span class="info-val">${v}</span></div>`).join('')}
+    </div>`;
+}
+
+async function majZone(){
+  const zone=document.getElementById('lv-zone')?.value;
+  if(!zone)return;
+  await sb.from('livreurs').update({zone}).eq('id',currentUser.id);
+  currentUser.zone=zone;toast('📍 Zone mise à jour');
+}
+async function majStatutLv(s){
+  await sb.from('livreurs').update({statut:s}).eq('id',currentUser.id);
+  currentUser.statut=s;toast('Statut : '+lvLabel(s));renderPage('lv-accueil');
+}
+
+// ============================================================
+// PAGE COMMERÇANT — NOUVELLE LIVRAISON (GPS)
+// ============================================================
+let gpsColX=null,gpsDepX=null,extrasX={lourd:false,express:false,nuit:false};
+
+async function pageCmAccueil(el){
+  const{data:params}=await sb.from('parametres').select('*');
+  const monTel=params?.find(p=>p.cle==='montel')?.valeur||'N/A';
+  const{data:cmds}=await sb.from('commandes').select('*').eq('commercant_id',currentUser.id).order('created_at',{ascending:false});
+  const enCours=(cmds||[]).filter(c=>['assignee','collecte'].includes(c.statut));
+  el.innerHTML=`
+    <div class="profil-header">
+      <div class="profil-avatar" style="background:linear-gradient(135deg,#1a4a6b,#2d7abf)">🏪</div>
+      <div><div class="profil-name">${currentUser.boutique}</div><div class="profil-sub">📍 ${currentUser.zone} · ${currentUser.prenom} ${currentUser.nom}</div></div>
+    </div>
+    <div class="alert alert-info">📱 Numéro de paiement à communiquer à vos clients : <strong>${monTel}</strong></div>
+    <div class="stats">
+      <div class="stat o"><div class="stat-lbl">En cours</div><div class="stat-val o">${enCours.length}</div></div>
+      <div class="stat g"><div class="stat-lbl">Terminées</div><div class="stat-val g">${(cmds||[]).filter(c=>['livree','paye'].includes(c.statut)).length}</div></div>
+      <div class="stat b"><div class="stat-lbl">Total</div><div class="stat-val b">${(cmds||[]).length}</div></div>
+    </div>
+    <div style="display:flex;gap:12px;margin:24px 0;flex-wrap:wrap">
+      <button class="btn btn-green btn-big" style="flex:1" onclick="renderPage('cm-nouvelle')">📍 Nouvelle livraison GPS</button>
+      <button class="btn btn-ghost btn-big" style="flex:1" onclick="renderPage('cm-serie')">🚀 Livraisons en série</button>
+    </div>
+    ${enCours.length?`<div class="card"><div class="card-title">🔥 Livraisons en cours</div>${renderCmds(enCours,monTel)}</div>`:''}
+  `;
+}
+
+async function pageCmNouvelle(el){
+  gpsColX=null;gpsDepX=null;extrasX={lourd:false,express:false,nuit:false};
+
+  el.innerHTML=`
+    <div class="sec-title">📍 Nouvelle livraison par GPS</div>
+
+    <!-- ÉTAPE 1 : LOCALISATION BOUTIQUE -->
+    <div class="card">
+      <div class="card-title">🏪 Étape 1 — Votre position (boutique)</div>
+      <div class="alert alert-info">Le navigateur va vous demander l'autorisation d'accéder à votre position. Acceptez pour que le calcul soit automatique.</div>
+      <button class="btn btn-blue btn-full" id="btn-gps-col" onclick="activerGpsCol()">
+        📍 Activer ma localisation automatiquement
+      </button>
+      <div id="gps-col-result" style="margin-top:14px"></div>
+      <div style="margin-top:14px">
+        <div style="font-size:12px;color:var(--texte-leger);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Ou coller un lien / coordonnées manuellement</div>
+        <div class="fg" style="margin-bottom:8px">
+          <input type="text" id="col-lien" placeholder="Ex: 12.3456, -1.6789 ou lien Google Maps" oninput="traiterLienCol()"/>
+        </div>
+      </div>
+      <div class="fg" style="margin-top:8px">
+        <label>Description de l'adresse (pour le livreur)</label>
+        <input type="text" id="col-desc" placeholder="Ex: Secteur 17, face à la grande mosquée..."/>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 2 : LOCALISATION CLIENT -->
+    <div class="card">
+      <div class="card-title">🏁 Étape 2 — Localisation du client</div>
+      <div class="alert alert-warning">
+        📱 <strong>Demandez à votre client :</strong><br>
+        1. Ouvrir Google Maps<br>
+        2. Appuyer longuement sur sa position<br>
+        3. Copier le lien ou les coordonnées<br>
+        4. Vous envoyer par WhatsApp
+      </div>
+      <div class="fg">
+        <label>Coller le lien ou les coordonnées du client</label>
+        <input type="text" id="dep-lien" placeholder="Ex: 12.3456, -1.6789 ou https://maps.google.com/..." oninput="traiterLienDep()"/>
+      </div>
+      <div id="gps-dep-result" style="margin-top:10px"></div>
+      <div class="fg" style="margin-top:12px">
+        <label>Description de l'adresse du client (pour le livreur)</label>
+        <input type="text" id="dep-desc" placeholder="Ex: Portail bleu, demander Aminata..."/>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 3 : COLIS + EXTRAS -->
+    <div class="card">
+      <div class="card-title">📦 Étape 3 — Détails du colis</div>
+      <div class="form-row">
+        <div class="fg"><label>Nature du colis</label><input type="text" id="n-colis" placeholder="Ex: Vêtements, documents..."/></div>
+        <div class="fg"><label>Heure souhaitée</label><input type="time" id="n-heure"/></div>
+      </div>
+      <label style="font-size:11px;color:var(--texte-leger);letter-spacing:1px;text-transform:uppercase;font-weight:700;display:block;margin-bottom:10px">Options supplémentaires</label>
+      <div class="extras-grid">
+        <div class="extra-check" id="ec-lourd" onclick="toggleExtra('lourd')">
+          <div class="extra-check-icon">📦</div>
+          <div><div class="extra-check-name">Colis lourd</div><div class="extra-check-prix">+ 500 F (> 10 kg)</div></div>
+        </div>
+        <div class="extra-check" id="ec-express" onclick="toggleExtra('express')">
+          <div class="extra-check-icon">⚡</div>
+          <div><div class="extra-check-name">Express</div><div class="extra-check-prix">+ 500 F (< 30 min)</div></div>
+        </div>
+        <div class="extra-check" id="ec-nuit" onclick="toggleExtra('nuit')">
+          <div class="extra-check-icon">🌙</div>
+          <div><div class="extra-check-name">Nuit</div><div class="extra-check-prix">+ 500 F (après 20h)</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RÉSULTAT CALCUL -->
+    <div id="tarif-result" style="display:none">
+      <div class="tarif-box">
+        <div class="tarif-box-label">💰 Tarif calculé automatiquement</div>
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <div class="tarif-montant" id="tr-montant">—</div>
+          <div class="tarif-fcfa">FCFA</div>
+        </div>
+        <div class="tarif-details">
+          <div class="tarif-ligne"><span class="lbl">Distance réelle</span><span class="val" id="tr-dist">—</span></div>
+          <div class="tarif-ligne"><span class="lbl">Tarif de base</span><span class="val" id="tr-base">—</span></div>
+          <div class="tarif-ligne"><span class="lbl">Suppléments</span><span class="val" id="tr-extras">Aucun</span></div>
+          <div class="tarif-ligne"><span class="lbl">Part du livreur (80%)</span><span class="val vert" id="tr-livreur">—</span></div>
+          <div class="tarif-ligne"><span class="lbl">Commission BEL (20%)</span><span class="val muted" id="tr-comm">—</span></div>
+        </div>
+        <div class="tarif-message" id="tr-message"></div>
+      </div>
+      <button class="btn btn-green btn-full btn-big" id="btn-envoyer" onclick="cmEnvoyer()">
+        ✅ Confirmer et envoyer la demande
+      </button>
+    </div>
+  `;
+
+  // Auto-détection nuit
+  if(new Date().getHours()>=20||new Date().getHours()<6){
+    document.getElementById('ec-nuit')?.classList.add('checked');
+    extrasX.nuit=true;
+  }
+}
+
+// GPS Boutique automatique
+function activerGpsCol(){
+  const btn=document.getElementById('btn-gps-col');
+  btn.disabled=true;btn.textContent='⏳ Localisation en cours...';
+  if(!navigator.geolocation){
+    toast('Géolocalisation non supportée sur ce navigateur','warning');
+    btn.disabled=false;btn.innerHTML='📍 Activer ma localisation automatiquement';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      gpsColX={lat:+pos.coords.latitude.toFixed(6),lng:+pos.coords.longitude.toFixed(6)};
+      afficherGpsResult('gps-col-result',gpsColX,'Votre position détectée');
+      btn.innerHTML='✅ Position détectée';
+      btn.style.background='#16a34a';
+      recalculerTarif();
+      toast('📍 Position boutique détectée !');
+    },
+    err=>{
+      btn.disabled=false;btn.innerHTML='📍 Activer ma localisation automatiquement';
+      toast('Impossible d\'accéder à votre position. Collez vos coordonnées manuellement.','warning');
+    },
+    {enableHighAccuracy:true,timeout:10000}
+  );
+}
+
+function traiterLienCol(){
+  const val=document.getElementById('col-lien')?.value;
+  if(!val||val.length<5)return;
+  const coords=extraireCoords(val);
+  if(coords){
+    gpsColX=coords;
+    afficherGpsResult('gps-col-result',coords,'Position boutique extraite');
+    recalculerTarif();
+  }
+}
+
+function traiterLienDep(){
+  const val=document.getElementById('dep-lien')?.value;
+  if(!val||val.length<5)return;
+  const coords=extraireCoords(val);
+  if(coords){
+    gpsDepX=coords;
+    afficherGpsResult('gps-dep-result',coords,'Position client extraite');
+    recalculerTarif();
+  }else{
+    document.getElementById('gps-dep-result').innerHTML=`<div class="gps-card error"><div class="gps-label">Format non reconnu</div><div class="gps-coords" style="color:#dc2626">Essayez : 12.3456, -1.6789</div></div>`;
+  }
+}
+
+function afficherGpsResult(containerId,coords,label){
+  const el=document.getElementById(containerId);
+  if(!el)return;
+  el.innerHTML=`<div class="gps-card success">
+    <div class="gps-label">✅ ${label}</div>
+    <div class="gps-coords">${coords.lat}, ${coords.lng}</div>
+    <a href="${lienGoogleMaps(coords.lat,coords.lng)}" target="_blank" style="font-size:12px;color:var(--vert);font-weight:700;margin-top:6px;display:inline-block">Vérifier sur Google Maps →</a>
+  </div>`;
+}
+
+function toggleExtra(type){
+  extrasX[type]=!extrasX[type];
+  document.getElementById('ec-'+type)?.classList.toggle('checked',extrasX[type]);
+  recalculerTarif();
+}
+
+function recalculerTarif(){
+  if(!gpsColX||!gpsDepX){
+    document.getElementById('tarif-result').style.display='none';
+    return;
+  }
+  const dist=haversine(gpsColX.lat,gpsColX.lng,gpsDepX.lat,gpsDepX.lng);
+  const result=getTarif(dist,extrasX);
+  const supps=(extrasX.lourd?500:0)+(extrasX.express?500:0)+(extrasX.nuit?500:0);
+
+  document.getElementById('tarif-result').style.display='block';
+  document.getElementById('tr-montant').textContent=result.tarif.toLocaleString();
+  document.getElementById('tr-dist').textContent=dist+' km';
+  document.getElementById('tr-base').textContent=(result.tarif-supps).toLocaleString()+' F';
+  document.getElementById('tr-extras').textContent=supps>0?'+ '+supps.toLocaleString()+' F':'Aucun';
+  document.getElementById('tr-livreur').textContent=result.livreur.toLocaleString()+' F';
+  document.getElementById('tr-comm').textContent=result.commission.toLocaleString()+' F';
+  document.getElementById('tr-message').innerHTML=`📢 <strong>Dites à votre client :</strong> "Le tarif de livraison est de <strong>${result.tarif.toLocaleString()} F</strong>"`;
+}
+
+async function cmEnvoyer(){
+  if(!gpsColX||!gpsDepX){toast('Les deux localisations sont requises','warning');return;}
+  const colis=document.getElementById('n-colis')?.value.trim();
+  if(!colis){toast('Renseignez la nature du colis','warning');return;}
+
+  const colDesc=document.getElementById('col-desc')?.value.trim()||'Position GPS';
+  const depDesc=document.getElementById('dep-desc')?.value.trim()||'Position GPS client';
+  const dist=haversine(gpsColX.lat,gpsColX.lng,gpsDepX.lat,gpsDepX.lng);
+  const result=getTarif(dist,extrasX);
+
+  const btn=document.getElementById('btn-envoyer');
+  btn.disabled=true;btn.textContent='Envoi...';
+
+  const{data:all}=await sb.from('commandes').select('id');
+  const newId='CMD'+String((all?.length||0)+1).padStart(3,'0');
+
+  const{error}=await sb.from('commandes').insert({
+    id:newId,
+    commercant_id:currentUser.id,
+    commercant_nom:currentUser.boutique,
+    collecte_addr:colDesc,
+    collecte_zone:currentUser.zone,
+    depot_addr:depDesc,
+    depot_zone:'GPS',
+    colis,
+    tarif:result.tarif,
+    distance_km:dist,
+    lat_boutique:gpsColX.lat,
+    lng_boutique:gpsColX.lng,
+    lat_client:gpsDepX.lat,
+    lng_client:gpsDepX.lng,
+    extra_lourd:extrasX.lourd,
+    extra_express:extrasX.express,
+    extra_nuit:extrasX.nuit,
+    statut:'en-attente'
+  });
+
+  btn.disabled=false;btn.textContent='✅ Confirmer et envoyer la demande';
+  if(error){toast('Erreur : '+error.message,'warning');return;}
+  toast('✅ Demande '+newId+' envoyée ! Tarif : '+result.tarif.toLocaleString()+' F');
+  setTimeout(()=>renderPage('cm-suivi'),1000);
+}
+
+// ============================================================
+// LIVRAISONS EN SÉRIE
+// ============================================================
+let serie=[];
+async function pageCmSerie(el){
+  el.innerHTML=`
+    <div class="sec-title">🚀 Livraisons en série</div>
+    <div class="alert alert-info">Idéal pour envoyer plusieurs colis le matin. Ajoutez chaque livraison puis envoyez tout en une fois.</div>
+    <div class="card">
+      <div class="card-title">➕ Ajouter une livraison</div>
+      <div class="fg"><label>Adresse de collecte (votre boutique)</label><input type="text" id="s-col" placeholder="Votre adresse"/></div>
+      <div class="fg"><label>Coordonnées ou lien Maps de votre boutique</label><input type="text" id="s-col-gps" placeholder="12.3456, -1.6789 ou lien Google Maps"/></div>
+      <div class="fg"><label>Coordonnées ou lien Maps du client</label><input type="text" id="s-dep-gps" placeholder="12.3456, -1.6789 ou lien Google Maps"/></div>
+      <div class="fg"><label>Adresse descriptive du client</label><input type="text" id="s-dep" placeholder="Point de repère, nom du client..."/></div>
+      <div class="form-row">
+        <div class="fg"><label>Nature du colis</label><input type="text" id="s-colis" placeholder="Ex: Vêtements"/></div>
+        <div class="fg"><label>Nom du client</label><input type="text" id="s-client" placeholder="Ex: Aminata"/></div>
+      </div>
+      <button class="btn btn-ghost" onclick="ajouterSerie()">+ Ajouter à la liste</button>
+    </div>
+    <div id="serie-liste"></div>
+    <div id="serie-total" style="display:none">
+      <div class="tarif-box">
+        <div class="tarif-box-label">Récapitulatif</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:14px;color:var(--texte-doux)" id="serie-count">0 livraisons</div>
+          <div class="tarif-montant" id="serie-montant" style="font-size:36px">0 F</div>
+        </div>
+      </div>
+      <button class="btn btn-green btn-full btn-big" onclick="envoyerSerie()">✅ Envoyer toutes les livraisons</button>
+    </div>
+  `;
+  serie=[];renderSerie();
+}
+
+function ajouterSerie(){
+  const col=document.getElementById('s-col')?.value.trim();
+  const colGps=document.getElementById('s-col-gps')?.value.trim();
+  const depGps=document.getElementById('s-dep-gps')?.value.trim();
+  const dep=document.getElementById('s-dep')?.value.trim();
+  const colis=document.getElementById('s-colis')?.value.trim();
+  const client=document.getElementById('s-client')?.value.trim();
+
+  if(!colis){toast('Nature du colis obligatoire','warning');return;}
+  const coordsCol=colGps?extraireCoords(colGps):null;
+  const coordsDep=depGps?extraireCoords(depGps):null;
+
+  let dist=5,tarif=1000,livreur=800;
+  if(coordsCol&&coordsDep){
+    dist=haversine(coordsCol.lat,coordsCol.lng,coordsDep.lat,coordsDep.lng);
+    const r=getTarif(dist);tarif=r.tarif;livreur=r.livreur;
+  }
+
+  serie.push({col:col||'Boutique',dep:dep||'Client',coordsCol,coordsDep,colis,client,tarif,livreur,dist});
+  toast('✅ Livraison ajoutée ('+tarif.toLocaleString()+' F)');
+  renderSerie();
+  ['s-dep-gps','s-dep','s-colis','s-client'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+}
+
+function renderSerie(){
+  const el=document.getElementById('serie-liste');
+  if(!el)return;
+  if(!serie.length){el.innerHTML='';document.getElementById('serie-total').style.display='none';return;}
+  const total=serie.reduce((s,i)=>s+i.tarif,0);
+  el.innerHTML=`<div class="card"><div class="card-title">📋 Liste (${serie.length} livraisons)</div>`+
+    serie.map((s,i)=>`<div class="serie-item">
+      <div class="serie-num">${i+1}</div>
+      <div class="serie-info">
+        <div class="serie-addr">${s.client?s.client+' — ':''} ${s.dep}</div>
+        <div class="serie-detail">${s.col} → ${s.dep} · ~${s.dist} km · 📦 ${s.colis}${s.coordsDep?` · GPS ✅`:' · ⚠️ GPS manquant'}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="serie-prix">${s.tarif.toLocaleString()} F</div>
+        <div style="font-size:11px;color:var(--vert);font-weight:600">Livreur: ${s.livreur.toLocaleString()} F</div>
+      </div>
+      <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px" onclick="retirerSerie(${i})">✕</button>
+    </div>`).join('')+'</div>';
+  document.getElementById('serie-total').style.display='block';
+  document.getElementById('serie-count').textContent=serie.length+' livraison'+(serie.length>1?'s':'');
+  document.getElementById('serie-montant').textContent=total.toLocaleString()+' F total';
+}
+
+function retirerSerie(i){serie.splice(i,1);renderSerie();}
+
+async function envoyerSerie(){
+  if(!serie.length)return;
+  const btn=document.querySelector('#serie-total .btn-green');
+  btn.disabled=true;btn.textContent='Envoi...';
+  const{data:all}=await sb.from('commandes').select('id');
+  let base=(all?.length||0),ok=0;
+  for(const s of serie){
+    base++;
+    const newId='CMD'+String(base).padStart(3,'0');
+    const{error}=await sb.from('commandes').insert({
+      id:newId,commercant_id:currentUser.id,commercant_nom:currentUser.boutique,
+      collecte_addr:s.col,collecte_zone:currentUser.zone,
+      depot_addr:s.dep+(s.client?' ('+s.client+')':''),depot_zone:'GPS',
+      colis:s.colis,tarif:s.tarif,distance_km:s.dist,
+      lat_boutique:s.coordsCol?.lat||null,lng_boutique:s.coordsCol?.lng||null,
+      lat_client:s.coordsDep?.lat||null,lng_client:s.coordsDep?.lng||null,
+      statut:'en-attente'
+    });
+    if(!error)ok++;
+  }
+  btn.disabled=false;btn.textContent='✅ Envoyer toutes les livraisons';
+  toast('✅ '+ok+' livraisons envoyées !');
+  serie=[];
+  setTimeout(()=>renderPage('cm-suivi'),1000);
+}
+
+async function pageCmSuivi(el){
+  const{data:params}=await sb.from('parametres').select('*');
+  const monTel=params?.find(p=>p.cle==='montel')?.valeur||'N/A';
+  const{data:cmds}=await sb.from('commandes').select('*').eq('commercant_id',currentUser.id).order('created_at',{ascending:false});
+  el.innerHTML=`<div class="sec-title">🔍 Mes livraisons</div>${renderCmds(cmds||[],monTel)}`;
+}
+
+async function pageCmProfil(el){
+  el.innerHTML=`
+    <div class="sec-title">👤 Mon profil</div>
+    <div class="card">
+      <div class="profil-header">
+        <div class="profil-avatar" style="background:linear-gradient(135deg,#1a4a6b,#2d7abf)">🏪</div>
+        <div><div class="profil-name">${currentUser.boutique}</div><div class="profil-sub">ID : ${currentUser.id}</div></div>
+      </div>
+      ${[['👤 Gérant',currentUser.prenom+' '+currentUser.nom],['📞 Téléphone',currentUser.tel],['📍 Zone',currentUser.zone]].map(([l,v])=>`<div class="info-ligne"><span class="info-lbl">${l}</span><span class="info-val">${v}</span></div>`).join('')}
+    </div>`;
+}
+
+function zoneOpts(sel=''){
+  return'<option value="">-- Sélectionner --</option>'+
+  ['Secteur 1 - Koulouba',"Secteur 4 - Patte d'Oie",'Secteur 6 - Gounghin','Secteur 10 - Cissin','Secteur 14 - Dassasgho','Secteur 15 - Pissy','Secteur 17 - Karpala','Secteur 22 - Samandin','Secteur 27 - Zogona','Secteur 30 - Tanghin','Ouaga 2000','Wemtenga','Nonsin','Boassa']
+  .map(z=>`<option ${z===sel?'selected':''}>${z}</option>`).join('');
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — BEL</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--vert:#1a6b3c;--vert-clair:#2d9e5f;--or:#f5a623;--rouge:#d4380d;--noir:#0a0a0a;--gris:#111;--blanc:#fdfcf8;--muted:#777;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'DM Sans',sans-serif;background:var(--gris);color:var(--blanc);min-height:100vh;display:flex;flex-direction:column;}
+  #login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--noir);}
+  .login-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:44px 38px;width:100%;max-width:380px;}
+  .admin-logo{text-align:center;margin-bottom:32px;}
+  .admin-icon{width:60px;height:60px;background:linear-gradient(135deg,var(--rouge),#e04b22);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 14px;box-shadow:0 8px 28px rgba(212,56,13,0.4);}
+  .admin-title{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;}
+  .admin-sub{font-size:11px;color:var(--rouge);letter-spacing:2px;text-transform:uppercase;margin-top:4px;}
+  .fg{margin-bottom:15px;}
+  .fg label{display:block;font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;}
+  .fg input,.fg select,.fg textarea{width:100%;padding:13px 15px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--blanc);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s;resize:vertical;}
+  .fg input:focus,.fg select:focus{border-color:var(--rouge);}
+  .fg select option{background:#111;}
+  .btn-login{width:100%;padding:15px;background:linear-gradient(135deg,var(--rouge),#e04b22);border:none;border-radius:12px;color:white;font-family:'Syne',sans-serif;font-weight:700;font-size:16px;cursor:pointer;box-shadow:0 4px 20px rgba(212,56,13,0.35);margin-top:4px;}
+  .login-hint{text-align:center;font-size:12px;color:var(--muted);margin-top:14px;}
+  #app{display:none;flex-direction:column;min-height:100vh;}
+  .topbar{height:62px;background:var(--noir);border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;padding:0 24px;gap:14px;position:sticky;top:0;z-index:100;}
+  .tb-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:#ff7a52;flex:1;}
+  .sync{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--vert-clair);background:rgba(26,107,60,0.12);padding:4px 10px;border-radius:20px;border:1px solid rgba(26,107,60,0.2);}
+  .sync-dot{width:6px;height:6px;background:var(--vert-clair);border-radius:50%;animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+  .tb-badge{font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:4px 12px;border-radius:20px;background:rgba(212,56,13,0.2);color:#ff7a52;border:1px solid rgba(212,56,13,0.3);}
+  .btn-logout{padding:8px 14px;background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:var(--muted);font-size:13px;cursor:pointer;transition:all 0.2s;}
+  .btn-logout:hover{border-color:var(--rouge);color:var(--rouge);}
+  .nav{display:flex;gap:2px;padding:10px 20px;background:var(--noir);border-bottom:1px solid rgba(255,255,255,0.04);overflow-x:auto;}
+  .nav-btn{padding:9px 16px;border:none;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;border-radius:8px;white-space:nowrap;transition:all 0.2s;display:flex;align-items:center;gap:7px;}
+  .nav-btn:hover{background:rgba(255,255,255,0.05);color:var(--blanc);}
+  .nav-btn.active{background:rgba(212,56,13,0.12);color:#ff7a52;}
+  .nav-btn .badge{background:var(--rouge);color:white;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;}
+  .main{flex:1;padding:24px;max-width:1100px;margin:0 auto;width:100%;}
+  .sec-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:20px;}
+  .sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px;}
+  .stat{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px;position:relative;overflow:hidden;}
+  .stat::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;}
+  .stat.g::before{background:var(--vert-clair);}.stat.r::before{background:var(--rouge);}.stat.o::before{background:var(--or);}.stat.b::before{background:#4a90e2;}
+  .stat-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+  .stat-val{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;margin:6px 0 3px;}
+  .stat-val.g{color:var(--vert-clair);}.stat-val.r{color:#ff7a52;}.stat-val.o{color:var(--or);}.stat-val.b{color:#4a90e2;}
+  .card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:22px;margin-bottom:18px;}
+  .card-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:18px;}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media(max-width:600px){.form-row{grid-template-columns:1fr;}}
+  .btn{padding:10px 18px;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px;}
+  .btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .btn-green{background:var(--vert);color:white;}.btn-green:hover:not(:disabled){background:var(--vert-clair);}
+  .btn-red{background:var(--rouge);color:white;}.btn-red:hover:not(:disabled){background:#e04b22;}
+  .btn-or{background:var(--or);color:#111;font-weight:700;}.btn-or:hover:not(:disabled){background:#f0b030;}
+  .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.1);color:var(--muted);}
+  .btn-ghost:hover{border-color:rgba(255,255,255,0.25);color:var(--blanc);}
+  .bs{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+  .s-disponible{background:rgba(45,158,95,0.2);color:#5de89e;border:1px solid rgba(45,158,95,0.3);}
+  .s-en-course{background:rgba(245,166,35,0.2);color:var(--or);border:1px solid rgba(245,166,35,0.3);}
+  .s-hors-ligne{background:rgba(100,100,100,0.2);color:#888;border:1px solid rgba(100,100,100,0.2);}
+  .s-en-attente{background:rgba(74,144,226,0.2);color:#7ab8f5;border:1px solid rgba(74,144,226,0.3);}
+  .s-assignee{background:rgba(245,166,35,0.2);color:var(--or);border:1px solid rgba(245,166,35,0.3);}
+  .s-collecte{background:rgba(26,107,60,0.2);color:#5de89e;border:1px solid rgba(26,107,60,0.3);}
+  .s-livree{background:rgba(26,107,60,0.3);color:#5de89e;border:1px solid rgba(26,107,60,0.5);}
+  .s-paye{background:rgba(26,107,60,0.4);color:#5de89e;border:1px solid var(--vert-clair);}
+  .cmd{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px;margin-bottom:14px;}
+  .cmd.urgent{border-color:rgba(245,166,35,0.4);}
+  .cmd-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:10px;flex-wrap:wrap;}
+  .cmd-id{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;}
+  .cmd-meta{font-size:12px;color:var(--muted);margin-top:3px;}
+  .cmd-trajet{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+  .trajet-pt{flex:1;min-width:130px;background:rgba(255,255,255,0.04);border-radius:9px;padding:10px;}
+  .trajet-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);}
+  .trajet-addr{font-size:13px;margin-top:4px;font-weight:500;}
+  .trajet-zone{font-size:11px;color:var(--muted);margin-top:3px;}
+  .trajet-arrow{display:flex;align-items:center;font-size:18px;color:var(--vert-clair);padding-top:16px;}
+  .cmd-foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+  .cmd-prix{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--or);}
+  .cmd-prix span{font-size:12px;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;}
+  .cmd-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .lv-card{display:flex;align-items:center;gap:14px;padding:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;margin-bottom:10px;}
+  .lv-av{width:42px;height:42px;background:linear-gradient(135deg,var(--vert),var(--vert-clair));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+  .lv-info{flex:1;}
+  .lv-name{font-weight:600;font-size:14px;}
+  .lv-det{font-size:12px;color:var(--muted);margin-top:3px;}
+  .lv-actions{display:flex;gap:7px;flex-wrap:wrap;}
+  .tbl{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;}
+  thead th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);}
+  tbody tr{border-bottom:1px solid rgba(255,255,255,0.04);}
+  tbody tr:hover{background:rgba(255,255,255,0.03);}
+  tbody td{padding:13px 14px;font-size:14px;}
+  .mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+  .mo.open{display:flex;}
+  .mo-box{background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:30px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;margin:16px;}
+  .mo-title{font-family:'Syne',sans-serif;font-size:19px;font-weight:700;margin-bottom:22px;}
+  .mo-actions{display:flex;gap:10px;margin-top:22px;justify-content:flex-end;}
+  .alert{padding:13px 16px;border-radius:11px;font-size:14px;margin-bottom:16px;}
+  .alert-info{background:rgba(74,144,226,0.12);border:1px solid rgba(74,144,226,0.3);color:#7ab8f5;}
+  .alert-warning{background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.3);color:var(--or);}
+  .pay-card{background:linear-gradient(135deg,rgba(26,107,60,0.15),rgba(26,107,60,0.05));border:1px solid rgba(26,107,60,0.3);border-radius:14px;padding:22px;margin-bottom:16px;}
+  .pay-montant{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:var(--vert-clair);}
+  .pay-ligne{display:flex;justify-content:space-between;font-size:14px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.06);}
+  .pay-ligne:last-child{border-bottom:none;}
+  .empty{text-align:center;padding:40px 20px;color:var(--muted);}
+  .empty .ic{font-size:40px;margin-bottom:14px;}
+  .loading{text-align:center;padding:40px;color:var(--muted);}
+  .toast-c{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;}
+  .toast{background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:13px 16px;font-size:14px;max-width:300px;animation:si 0.3s ease;}
+  .toast.success{border-color:rgba(45,158,95,0.4);}.toast.warning{border-color:rgba(245,166,35,0.4);}
+  @keyframes si{from{transform:translateX(100px);opacity:0}to{transform:translateX(0);opacity:1}}
+  @media(max-width:600px){.main{padding:16px;}.topbar{padding:0 14px;}.nav{padding:8px 14px;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="login-box">
+    <div class="admin-logo">
+      <div class="admin-icon">⚙️</div>
+      <div class="admin-title">Espace Admin</div>
+      <div class="admin-sub">Burkina Express Logistique</div>
+    </div>
+    <div id="msg-login"></div>
+    <div class="fg"><label>Identifiant</label><input type="text" id="a-login" placeholder="admin"/></div>
+    <div class="fg"><label>Mot de passe</label><input type="password" id="a-pass" placeholder="••••••••"/></div>
+    <button class="btn-login" id="btn-login" onclick="adminLogin()">Accéder →</button>
+    <div class="login-hint">Accès réservé à l'administrateur</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="tb-logo">⚙️ BEL Admin</div>
+    <div class="sync"><div class="sync-dot"></div>En ligne</div>
+    <span class="tb-badge">Administrateur</span>
+    <button class="btn-logout" onclick="adminLogout()">Déconnexion</button>
+  </div>
+  <div class="nav" id="nav"></div>
+  <div class="main" id="main"><div class="loading">⏳ Chargement...</div></div>
+</div>
+
+<!-- MODAL ASSIGNER -->
+<div class="mo" id="mo-assigner">
+  <div class="mo-box">
+    <div class="mo-title">🎯 Assigner un livreur</div>
+    <div id="mo-cmd-info"></div>
+    <div id="mo-livreurs-liste"></div>
+    <div class="mo-actions"><button class="btn btn-ghost" onclick="closeMo('mo-assigner')">Fermer</button></div>
+  </div>
+</div>
+
+<!-- MODAL PAIEMENT -->
+<div class="mo" id="mo-paiement">
+  <div class="mo-box">
+    <div class="mo-title">💰 Confirmer paiement reçu</div>
+    <div id="mo-pay-info"></div>
+    <div class="mo-actions">
+      <button class="btn btn-ghost" onclick="closeMo('mo-paiement')">Annuler</button>
+      <button class="btn btn-or" id="btn-confirmer-pay" onclick="confirmerPaiement()">✅ Paiement reçu</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL LIVREUR -->
+<div class="mo" id="mo-livreur">
+  <div class="mo-box">
+    <div class="mo-title">🛵 Inscrire un livreur</div>
+    <div class="form-row">
+      <div class="fg"><label>Prénom</label><input type="text" id="nl-prenom" placeholder="Prénom"/></div>
+      <div class="fg"><label>Nom</label><input type="text" id="nl-nom" placeholder="Nom"/></div>
+    </div>
+    <div class="fg"><label>Téléphone</label><input type="tel" id="nl-tel" placeholder="70000000"/></div>
+    <div class="fg"><label>CNI</label><input type="text" id="nl-cni" placeholder="B00000000"/></div>
+    <div class="fg"><label>Zone</label><select id="nl-zone">${zoneOpts()}</select></div>
+    <div class="fg"><label>Moto</label><input type="text" id="nl-moto" placeholder="AA 0000 BF"/></div>
+    <div class="fg"><label>Mot de passe</label><input type="password" id="nl-pass" placeholder="••••••••"/></div>
+    <div class="mo-actions">
+      <button class="btn btn-ghost" onclick="closeMo('mo-livreur')">Annuler</button>
+      <button class="btn btn-green" id="btn-inscr-lv" onclick="inscrireLivreur()">✅ Inscrire</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL COMMERCANT -->
+<div class="mo" id="mo-commercant">
+  <div class="mo-box">
+    <div class="mo-title">🏪 Inscrire un commerçant</div>
+    <div class="fg"><label>Boutique</label><input type="text" id="nc-boutique" placeholder="Nom de la boutique"/></div>
+    <div class="form-row">
+      <div class="fg"><label>Prénom</label><input type="text" id="nc-prenom" placeholder="Prénom"/></div>
+      <div class="fg"><label>Nom</label><input type="text" id="nc-nom" placeholder="Nom"/></div>
+    </div>
+    <div class="fg"><label>Téléphone</label><input type="tel" id="nc-tel" placeholder="70000000"/></div>
+    <div class="fg"><label>Zone</label><select id="nc-zone">${zoneOpts()}</select></div>
+    <div class="fg"><label>Mot de passe</label><input type="password" id="nc-pass" placeholder="••••••••"/></div>
+    <div class="mo-actions">
+      <button class="btn btn-ghost" onclick="closeMo('mo-commercant')">Annuler</button>
+      <button class="btn btn-green" id="btn-inscr-cm" onclick="inscrireCommercant()">✅ Inscrire</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-c" id="toast-c"></div>
+
+<script>
+const SUPABASE_URL = 'https://oklotjdbfeawqastqtyc.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_KDjEeMlP0jPKJTfGXx6QaQ_6HoK8BGj';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const ADMIN_LOGIN = 'admin';
+const ADMIN_PASS  = 'bel2025';
+
+let commission = 20;
+let monTel = '';
+let payEnCours = null;
+
+function adminLogin() {
+  const l=document.getElementById('a-login').value.trim();
+  const p=document.getElementById('a-pass').value.trim();
+  if (l===ADMIN_LOGIN && p===ADMIN_PASS) {
+    document.getElementById('login').style.display='none';
+    document.getElementById('app').style.display='flex';
+    buildNav(); renderPage('accueil');
+  } else {
+    document.getElementById('msg-login').innerHTML='<div style="color:#ff7a52;font-size:13px;margin-bottom:12px">❌ Identifiants incorrects</div>';
+  }
+}
+function adminLogout(){document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';}
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('login').style.display!=='none')adminLogin();});
+
+const PAGES=[
+  {id:'accueil',icon:'📊',label:'Tableau de bord'},
+  {id:'commandes',icon:'📦',label:'Commandes',badge:true},
+  {id:'livreurs',icon:'🛵',label:'Livreurs'},
+  {id:'commercants',icon:'🏪',label:'Commerçants'},
+  {id:'paiements',icon:'💰',label:'Paiements'},
+  {id:'parametres',icon:'⚙️',label:'Paramètres'},
+];
+
+async function buildNav(){
+  const {data:cmds}=await sb.from('commandes').select('statut').eq('statut','en-attente');
+  const n=cmds?.length||0;
+  document.getElementById('nav').innerHTML=PAGES.map(p=>`
+    <button class="nav-btn" onclick="renderPage('${p.id}')" data-page="${p.id}">
+      ${p.icon} ${p.label}
+      ${p.badge&&n>0?`<span class="badge">${n}</span>`:''}
+    </button>`).join('');
+}
+
+function renderPage(id){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===id));
+  const el=document.getElementById('main');
+  el.innerHTML='<div class="loading">⏳ Chargement...</div>';
+  ({accueil:pageAccueil,commandes:pageCommandes,livreurs:pageLivreurs,commercants:pageCommercants,paiements:pagePaiements,parametres:pageParametres})[id]?.(el);
+}
+
+function sLabel(s){return{'en-attente':'En attente','assignee':'Assignée','collecte':'En cours','livree':'Livrée','paye':'Payée'}[s]||s;}
+function lvLabel(s){return{'disponible':'Disponible','en-course':'En course','hors-ligne':'Hors ligne'}[s]||s;}
+function openMo(id){document.getElementById(id).classList.add('open');}
+function closeMo(id){document.getElementById(id).classList.remove('open');}
+function toast(msg,type='success'){
+  const c=document.getElementById('toast-c');
+  const t=document.createElement('div');
+  t.className='toast '+type;
+  t.textContent=(type==='success'?'✅ ':'⚠️ ')+msg;
+  c.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity 0.4s';setTimeout(()=>t.remove(),400);},3500);
+}
+function zoneOpts(sel=''){
+  return '<option value="">-- Sélectionner --</option>'+
+  ["Secteur 1 - Koulouba","Secteur 4 - Patte d'Oie","Secteur 6 - Gounghin","Secteur 10 - Cissin","Secteur 14 - Dassasgho","Secteur 15 - Pissy","Secteur 17 - Karpala","Secteur 22 - Samandin","Secteur 27 - Zogona","Secteur 30 - Tanghin","Ouaga 2000","Wemtenga","Nonsin","Boassa"]
+  .map(z=>`<option ${z===sel?'selected':''}>${z}</option>`).join('');
+}
+
+async function loadParams(){
+  const {data}=await sb.from('parametres').select('*');
+  commission=parseInt(data?.find(p=>p.cle==='commission')?.valeur||'20');
+  monTel=data?.find(p=>p.cle==='montel')?.valeur||'';
+}
+
+function renderCmds(cmds){
+  if(!cmds.length) return '<div class="empty"><div class="ic">📭</div><p>Aucune commande</p></div>';
+  return cmds.map(c=>{
+    const myC=Math.round(c.tarif*commission/100),partL=c.tarif-myC;
+    let actions='';
+    if(c.statut==='en-attente') actions=`<button class="btn btn-red" onclick="ouvrirAssigner('${c.id}')">🎯 Assigner</button>`;
+    else if(c.statut==='assignee') actions=`<button class="btn btn-or" onclick="majCmd('${c.id}','collecte')">✅ Collecte confirmée</button>`;
+    else if(c.statut==='collecte') actions=`<button class="btn btn-green" onclick="majCmd('${c.id}','livree')">📦 Livraison confirmée</button>`;
+    else if(c.statut==='livree') actions=`<button class="btn btn-or" onclick="ouvrirPaiement('${c.id}')">💰 Paiement reçu</button>`;
+    return `<div class="cmd ${c.statut==='en-attente'?'urgent':''}">
+      <div class="cmd-head">
+        <div><div class="cmd-id">${c.id} — ${c.commercant_nom}</div>
+        <div class="cmd-meta">📅 ${new Date(c.created_at).toLocaleDateString('fr-FR')} · 📦 ${c.colis}${c.livreur_nom?' · 🛵 '+c.livreur_nom:''}</div></div>
+        <span class="bs s-${c.statut}">${sLabel(c.statut)}</span>
+      </div>
+      <div class="cmd-trajet">
+        <div class="trajet-pt"><div class="trajet-lbl">📍 Collecte</div><div class="trajet-addr">${c.collecte_addr}</div><div class="trajet-zone">${c.collecte_zone}</div></div>
+        <div class="trajet-arrow">→</div>
+        <div class="trajet-pt"><div class="trajet-lbl">🏁 Dépôt</div><div class="trajet-addr">${c.depot_addr}</div><div class="trajet-zone">${c.depot_zone}</div></div>
+      </div>
+      <div class="cmd-foot">
+        <div class="cmd-prix">${c.tarif?.toLocaleString()} F <span>· Comm: ${myC} F · Livreur: ${partL} F</span></div>
+        ${actions?`<div class="cmd-actions">${actions}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function pageAccueil(el){
+  await loadParams();
+  const [{data:livrs},{data:comms},{data:cmds}] = await Promise.all([
+    sb.from('livreurs').select('*'),
+    sb.from('commercants').select('*'),
+    sb.from('commandes').select('*').order('created_at',{ascending:false})
+  ]);
+  const enAtt=(cmds||[]).filter(c=>c.statut==='en-attente');
+  const dispos=(livrs||[]).filter(l=>l.statut==='disponible');
+  const payTotal=(cmds||[]).filter(c=>c.statut==='paye').reduce((s,c)=>s+Math.round(c.tarif*commission/100),0);
+
+  el.innerHTML=`
+    <div class="sec-header"><div class="sec-title">Tableau de bord</div></div>
+    <div class="stats">
+      <div class="stat g"><div class="stat-lbl">Livreurs</div><div class="stat-val g">${(livrs||[]).length}</div><div style="font-size:12px;color:var(--muted)">${dispos.length} disponibles</div></div>
+      <div class="stat b"><div class="stat-lbl">Commerçants</div><div class="stat-val b">${(comms||[]).length}</div></div>
+      <div class="stat r"><div class="stat-lbl">En attente</div><div class="stat-val r">${enAtt.length}</div></div>
+      <div class="stat o"><div class="stat-lbl">Commissions</div><div class="stat-val o">${payTotal.toLocaleString()} F</div></div>
+    </div>
+    <div class="card"><div class="card-title">⚡ Demandes urgentes</div>${renderCmds(enAtt)}</div>
+    <div class="card"><div class="card-title">🛵 Livreurs disponibles</div>
+      ${dispos.map(l=>`<div class="lv-card"><div class="lv-av">🛵</div><div class="lv-info"><div class="lv-name">${l.prenom} ${l.nom}</div><div class="lv-det">📍 ${l.zone} · 📞 ${l.tel}</div></div><span class="bs s-disponible">Disponible</span></div>`).join('')||'<div class="empty"><div class="ic">😴</div><p>Aucun livreur disponible</p></div>'}
+    </div>`;
+}
+
+async function pageCommandes(el){
+  await loadParams();
+  const {data:cmds}=await sb.from('commandes').select('*').order('created_at',{ascending:false});
+  el.innerHTML=`<div class="sec-title">Toutes les commandes</div>${renderCmds(cmds||[])}`;
+}
+
+async function pageLivreurs(el){
+  const {data:livrs}=await sb.from('livreurs').select('*').order('created_at',{ascending:false});
+  el.innerHTML=`
+    <div class="sec-header"><div class="sec-title">Livreurs inscrits</div><button class="btn btn-green" onclick="openMo('mo-livreur')">+ Nouveau</button></div>
+    ${(livrs||[]).map(l=>`<div class="lv-card">
+      <div class="lv-av">🛵</div>
+      <div class="lv-info"><div class="lv-name">${l.prenom} ${l.nom} <span style="font-size:11px;color:var(--muted)">ID: ${l.id}</span></div>
+      <div class="lv-det">📞 ${l.tel} · 📍 ${l.zone} · 🏍️ ${l.moto||'—'} · CNI: ${l.cni}</div></div>
+      <div class="lv-actions">
+        <span class="bs s-${l.statut}">${lvLabel(l.statut)}</span>
+        <button class="btn btn-ghost" onclick="toggleLv('${l.id}','${l.statut}')">Changer</button>
+        <a href="https://wa.me/226${l.tel}" target="_blank" class="btn btn-green" style="text-decoration:none">WhatsApp</a>
+      </div>
+    </div>`).join('')||'<div class="empty"><div class="ic">🛵</div><p>Aucun livreur inscrit</p></div>'}`;
+}
+
+async function pageCommercants(el){
+  const {data:comms}=await sb.from('commercants').select('*').order('created_at',{ascending:false});
+  el.innerHTML=`
+    <div class="sec-header"><div class="sec-title">Commerçants inscrits</div><button class="btn btn-green" onclick="openMo('mo-commercant')">+ Nouveau</button></div>
+    <div class="card"><div class="tbl"><table>
+      <thead><tr>${['ID','Boutique','Gérant','Téléphone','Zone','Actions'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+      <tbody>${(comms||[]).map(c=>`<tr>
+        <td style="font-family:monospace;color:var(--or);font-size:13px">${c.id}</td>
+        <td style="font-weight:600">${c.boutique}</td>
+        <td>${c.prenom} ${c.nom}</td><td>${c.tel}</td><td style="font-size:13px">${c.zone}</td>
+        <td><a href="https://wa.me/226${c.tel}" target="_blank" class="btn btn-green" style="text-decoration:none;padding:7px 12px;font-size:12px">WhatsApp</a></td>
+      </tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Aucun commerçant</td></tr>'}</tbody>
+    </table></div></div>`;
+}
+
+async function pagePaiements(el){
+  await loadParams();
+  const {data:cmds}=await sb.from('commandes').select('*').order('created_at',{ascending:false});
+  const livrees=(cmds||[]).filter(c=>c.statut==='livree');
+  const payees=(cmds||[]).filter(c=>c.statut==='paye');
+  const totalC=payees.reduce((s,c)=>s+Math.round(c.tarif*commission/100),0);
+
+  el.innerHTML=`
+    <div class="sec-title">💰 Paiements</div>
+    <div class="stats">
+      <div class="stat r"><div class="stat-lbl">En attente</div><div class="stat-val r">${livrees.length}</div></div>
+      <div class="stat g"><div class="stat-lbl">Commissions</div><div class="stat-val g">${totalC.toLocaleString()} F</div></div>
+    </div>
+    <div class="card"><div class="card-title">⏳ Paiements attendus</div>
+      ${livrees.length?livrees.map(c=>{
+        const myC=Math.round(c.tarif*commission/100),partL=c.tarif-myC;
+        return `<div class="pay-card">
+          <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+            <div><div style="font-weight:600">${c.id} — ${c.commercant_nom}</div><div style="font-size:13px;color:var(--muted);margin-top:3px">${c.collecte_zone} → ${c.depot_zone}${c.livreur_nom?' · 🛵 '+c.livreur_nom:''}</div></div>
+            <div class="pay-montant">${c.tarif?.toLocaleString()} F</div>
+          </div>
+          <div class="pay-ligne"><span>Ma commission (${commission}%)</span><span style="color:var(--vert-clair);font-weight:600">${myC.toLocaleString()} F</span></div>
+          <div class="pay-ligne"><span>À reverser au livreur</span><span style="color:var(--or);font-weight:600">${partL.toLocaleString()} F → ${c.livreur_nom||'—'}</span></div>
+          <div style="margin-top:12px;padding:10px 14px;background:rgba(245,166,35,0.1);border-radius:8px;font-size:13px;color:var(--or)">
+            📱 Client doit envoyer <strong>${c.tarif?.toLocaleString()} F</strong> sur : <strong>${monTel}</strong>
+          </div>
+          <div style="margin-top:12px"><button class="btn btn-or" onclick="ouvrirPaiement('${c.id}')">✅ Paiement reçu</button></div>
+        </div>`;
+      }).join(''):'<div class="empty"><div class="ic">✅</div><p>Aucun paiement en attente</p></div>'}
+    </div>
+    <div class="card"><div class="card-title">✅ Paiements enregistrés</div><div class="tbl">
+      <table><thead><tr>${['ID','Commerçant','Livreur','Tarif','Comm.','Part livreur'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+      <tbody>${payees.map(c=>{const myC=Math.round(c.tarif*commission/100);return`<tr>
+        <td style="font-family:monospace;color:var(--or);font-size:13px">${c.id}</td>
+        <td>${c.commercant_nom}</td><td>${c.livreur_nom||'—'}</td>
+        <td>${c.tarif?.toLocaleString()} F</td>
+        <td style="color:var(--vert-clair);font-weight:600">${myC.toLocaleString()} F</td>
+        <td style="color:var(--or)">${(c.tarif-myC).toLocaleString()} F</td>
+      </tr>`;}).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Aucun paiement</td></tr>'}</tbody>
+      </table>
+    </div></div>`;
+}
+
+async function pageParametres(el){
+  await loadParams();
+  el.innerHTML=`
+    <div class="sec-title">⚙️ Paramètres</div>
+    <div class="card"><div class="card-title">💰 Commission & Paiement</div>
+      <div class="fg"><label>Taux de commission (%)</label><input type="number" id="p-comm" value="${commission}" min="5" max="50"/></div>
+      <div class="fg"><label>Votre numéro Mobile Money</label><input type="text" id="p-tel" value="${monTel}" placeholder="70 XX XX XX (Orange Money)"/></div>
+      <button class="btn btn-green" onclick="saveParams()" style="margin-top:6px">💾 Sauvegarder</button>
+    </div>
+    <div class="card"><div class="card-title">📊 Grille tarifaire</div><div class="tbl">
+      <table><thead><tr>${['Distance','Tarif','Commission','Livreur'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+      <tbody>${[['Même secteur',500],['Secteur adjacent',750],['Zone éloignée',1000],['Traversée ville',1500]].map(([l,t])=>{const c=Math.round(t*commission/100);return`<tr><td>${l}</td><td style="color:var(--or);font-weight:600">${t.toLocaleString()} F</td><td style="color:var(--vert-clair)">${c.toLocaleString()} F</td><td>${(t-c).toLocaleString()} F</td></tr>`;}).join('')}</tbody>
+      </table>
+    </div></div>`;
+}
+
+async function saveParams(){
+  const c=document.getElementById('p-comm').value;
+  const t=document.getElementById('p-tel').value;
+  await sb.from('parametres').upsert({cle:'commission',valeur:c});
+  await sb.from('parametres').upsert({cle:'montel',valeur:t});
+  commission=parseInt(c); monTel=t;
+  toast('Paramètres sauvegardés ✅');
+}
+
+async function majCmd(id,statut){
+  await sb.from('commandes').update({statut}).eq('id',id);
+  toast('Statut : '+sLabel(statut));
+  renderPage('commandes');
+  buildNav();
+}
+
+async function toggleLv(id,statut){
+  const cycle={'disponible':'en-course','en-course':'hors-ligne','hors-ligne':'disponible'};
+  await sb.from('livreurs').update({statut:cycle[statut]}).eq('id',id);
+  toast('Statut livreur mis à jour');
+  renderPage('livreurs');
+}
+
+let cmdEnCours=null;
+async function ouvrirAssigner(cmdId){
+  cmdEnCours=cmdId;
+  const {data:cmd}=await sb.from('commandes').select('*').eq('id',cmdId).single();
+  const {data:livrs}=await sb.from('livreurs').select('*').neq('statut','hors-ligne');
+  const dispos=(livrs||[]).filter(l=>l.statut==='disponible');
+  const autres=(livrs||[]).filter(l=>l.statut!=='disponible');
+
+  document.getElementById('mo-cmd-info').innerHTML=`
+    <div class="alert alert-info">📦 ${cmd.id} : <strong>${cmd.collecte_zone}</strong> → <strong>${cmd.depot_zone}</strong> · ${cmd.colis}</div>`;
+
+  document.getElementById('mo-livreurs-liste').innerHTML=`
+    <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🟢 Disponibles (${dispos.length})</div>
+    ${dispos.map(l=>`<div class="lv-card">
+      <div class="lv-av">🛵</div>
+      <div class="lv-info"><div class="lv-name">${l.prenom} ${l.nom}</div><div class="lv-det">📍 ${l.zone} · 📞 ${l.tel}</div></div>
+      <div class="lv-actions">
+        <span class="bs s-disponible">Disponible</span>
+        <button class="btn btn-green" onclick="assignerLv('${cmdId}','${l.id}','${l.prenom} ${l.nom}')">Assigner</button>
+      </div>
+    </div>`).join('')||'<div style="color:var(--muted);padding:12px 0">Aucun livreur disponible</div>'}
+    ${autres.length?`<div style="font-size:12px;color:var(--muted);text-transform:uppercase;margin:14px 0 10px">Autres livreurs</div>
+    ${autres.map(l=>`<div class="lv-card"><div class="lv-av">🛵</div><div class="lv-info"><div class="lv-name">${l.prenom} ${l.nom}</div><div class="lv-det">📍 ${l.zone}</div></div><span class="bs s-${l.statut}">${lvLabel(l.statut)}</span></div>`).join('')}`:''}
+  `;
+  openMo('mo-assigner');
+}
+
+async function assignerLv(cmdId,lvId,lvNom){
+  await sb.from('commandes').update({statut:'assignee',livreur_id:lvId,livreur_nom:lvNom}).eq('id',cmdId);
+  await sb.from('livreurs').update({statut:'en-course'}).eq('id',lvId);
+  closeMo('mo-assigner');
+  toast(`✅ ${lvNom} assigné à ${cmdId}`);
+  renderPage('commandes');
+  buildNav();
+}
+
+async function ouvrirPaiement(id){
+  payEnCours=id;
+  await loadParams();
+  const {data:c}=await sb.from('commandes').select('*').eq('id',id).single();
+  const myC=Math.round(c.tarif*commission/100),partL=c.tarif-myC;
+  document.getElementById('mo-pay-info').innerHTML=`
+    <div class="pay-card">
+      <div class="pay-montant">${c.tarif?.toLocaleString()} F</div>
+      <div style="margin-top:14px">
+        <div class="pay-ligne"><span>Commande</span><span style="font-family:monospace">${c.id}</span></div>
+        <div class="pay-ligne"><span>Livreur</span><span>${c.livreur_nom||'—'}</span></div>
+        <div class="pay-ligne"><span>Ma commission (${commission}%)</span><span style="color:var(--vert-clair);font-weight:700">${myC.toLocaleString()} F</span></div>
+        <div class="pay-ligne"><span>À reverser au livreur</span><span style="color:var(--or);font-weight:700">${partL.toLocaleString()} F</span></div>
+      </div>
+    </div>
+    <div class="alert alert-warning">⚠️ Confirmez uniquement après avoir reçu le paiement du client.</div>`;
+  openMo('mo-paiement');
+}
+
+async function confirmerPaiement(){
+  if(!payEnCours) return;
+  const btn=document.getElementById('btn-confirmer-pay');
+  btn.disabled=true;
+  const {data:c}=await sb.from('commandes').select('*').eq('id',payEnCours).single();
+  const partL=c.tarif-Math.round(c.tarif*commission/100);
+  await sb.from('commandes').update({statut:'paye'}).eq('id',payEnCours);
+  if(c.livreur_id){
+    const {data:lv}=await sb.from('livreurs').select('gains').eq('id',c.livreur_id).single();
+    await sb.from('livreurs').update({statut:'disponible',gains:(lv?.gains||0)+partL}).eq('id',c.livreur_id);
+  }
+  closeMo('mo-paiement');
+  toast('💰 Paiement enregistré ! Livreur remis disponible.');
+  btn.disabled=false;
+  renderPage('paiements');
+  buildNav();
+}
+
+async function inscrireLivreur(){
+  const prenom=document.getElementById('nl-prenom').value.trim();
+  const nom=document.getElementById('nl-nom').value.trim();
+  const tel=document.getElementById('nl-tel').value.trim();
+  const cni=document.getElementById('nl-cni').value.trim();
+  const zone=document.getElementById('nl-zone').value;
+  const moto=document.getElementById('nl-moto').value.trim();
+  const pass=document.getElementById('nl-pass').value.trim();
+  if(!prenom||!nom||!tel||!cni||!zone||!pass){toast('Remplissez tous les champs','warning');return;}
+  const btn=document.getElementById('btn-inscr-lv');
+  btn.disabled=true;
+  const {data:all}=await sb.from('livreurs').select('id');
+  const id='L'+String((all?.length||0)+1).padStart(3,'0');
+  const {error}=await sb.from('livreurs').insert({id,prenom,nom,tel,whatsapp:tel,cni,zone,moto,statut:'disponible',gains:0,password:pass});
+  btn.disabled=false;
+  if(error){toast('Erreur : '+error.message,'warning');return;}
+  closeMo('mo-livreur');
+  toast(`✅ Livreur ${prenom} ${nom} inscrit (${id})`);
+  renderPage('livreurs');
+}
+
+async function inscrireCommercant(){
+  const boutique=document.getElementById('nc-boutique').value.trim();
+  const prenom=document.getElementById('nc-prenom').value.trim();
+  const nom=document.getElementById('nc-nom').value.trim();
+  const tel=document.getElementById('nc-tel').value.trim();
+  const zone=document.getElementById('nc-zone').value;
+  const pass=document.getElementById('nc-pass').value.trim();
+  if(!boutique||!prenom||!nom||!tel||!zone||!pass){toast('Remplissez tous les champs','warning');return;}
+  const btn=document.getElementById('btn-inscr-cm');
+  btn.disabled=true;
+  const {data:all}=await sb.from('commercants').select('id');
+  const id='C'+String((all?.length||0)+1).padStart(3,'0');
+  const {error}=await sb.from('commercants').insert({id,boutique,prenom,nom,tel,zone,password:pass});
+  btn.disabled=false;
+  if(error){toast('Erreur : '+error.message,'warning');return;}
+  closeMo('mo-commercant');
+  toast(`✅ Commerçant ${boutique} inscrit (${id})`);
+  renderPage('commercants');
+}
+
+document.querySelectorAll('.mo').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+</script>
+</body>
+</html>
